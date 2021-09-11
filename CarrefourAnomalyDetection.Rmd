@@ -1,0 +1,113 @@
+---
+title: "CarrefourAnomalyDetection"
+author: "Joy Machuka"
+date: "9/11/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Definition
+As a Data analyst at Carrefour Kenya working for the  marketing department Carrefour you are to come up with  relevant marketing strategies that will result in the higher no. of sales. Amongst the processes is checking for anomalies in the data.
+
+# Specifying the Question
+Identify Anomalies in the Sales of Carrefour
+
+# Metric of Success
+When we are able to detect anomalies in the sales trend.
+
+#Context
+Anomalies could be used in sales data to detect fraud or to detect abnormal trends in sales made hence further investigation. In our case we are going to check for both.
+
+# Experimental Design
+Load the Data
+Check the Data
+Data cleaning
+Exploratory Data Analysis
+Implement the Solution
+Challenge the Solution
+
+# Data Sourcing
+```{r}
+# loaddata
+sales <- read.csv("http://bit.ly/CarreFourSalesDataset")
+head(sales)
+```
+
+```{r}
+dim(sales)
+```
+Data has 1000 columns and 2 columns
+```{r}
+class(sales)
+```
+```{r}
+str(sales)
+```
+Our columns are  date and sales. 
+```{r}
+#checking for missing values
+anyNA(sales)
+```
+No missing values
+```{r}
+library(tidyverse)
+```
+```{r}
+library(tibbletime)
+```
+```{r}
+sales$Date <- as.Date(sales$Date, "%m/%d/%Y")
+
+sales_ts = sales %>%
+  as_tibble() %>%
+  as_tbl_time(Date) %>%
+  arrange(Date) %>%
+  as_period("daily")
+```
+
+```{r}
+anyNA(sales_ts)
+```
+Implementing solution
+```{r}
+# install.packages("anomalize")
+library(anomalize)
+```
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+pkg <- c('timetk')
+# install.packages(pkg)
+```
+```{r}
+library(timetk)
+```
+
+```{r}
+#function
+sales_anomaly <- sales_ts %>%
+  time_decompose(Sales) %>% 
+  anomalize(remainder,max_anoms = 0.2, alpha=0.05) %>%
+  time_recompose() %>% glimpse()
+
+```
+
+```{r}
+# Plot anomalies
+sales_anomaly %>% plot_anomalies(time_recomposed = TRUE)
+
+```
+Our data has no anomalies.
+
+
+
+
+

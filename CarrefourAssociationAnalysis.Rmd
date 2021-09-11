@@ -1,0 +1,114 @@
+---
+title: "CarrefourAssociationAnalysis"
+author: "Joy Machuka"
+date: "9/11/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Definition
+As a Data analyst at Carrefour Kenya working for the  marketing department Carrefour you are to come up with  relevant marketing strategies that will result in the higher no. of sales. Amongst the processes is checking for associations in the data.
+
+# Specifying the Question
+
+Identify relationships between the Group of Items
+
+# Metric of Success
+Identify the relationships between the Groups of Items provided
+
+# Context
+Working on the Carrefour Kenya Sales data to identify the most relevant marketing strategies by identifying related groups of Items.
+
+# Experimental Design
+Load the Data
+Check the Data
+Implement the Solution
+Challenge the Solution
+
+# Data Sourcing
+```{r}
+library(arules)
+```
+
+```{r}
+# Data to find associations
+association <- read.transactions("http://bit.ly/SupermarketDatasetII")
+head(association)
+```
+```{r}
+dim(association)
+```
+```{r}
+class(association)
+```
+
+```{r}
+#check first 10 items
+inspect(association[1:10])
+```
+```{r}
+# number of items in the first 10 itemset or transaction
+size(head(association, 10))
+```
+```{r}
+item <- as.data.frame(itemLabels(association))
+colnames(item) <- "Item"
+head(item,10)
+```
+```{r}
+summary(association)
+```
+```{r}
+print("Frequency of each item")
+itemFrequency(association[,1:15], type="absolute")
+cat ("Tab\n")
+
+print("Frequency of first 15 Items compared to Others")
+# How many times these items have appeared as compared to others.
+round(itemFrequency(association[,1:15], type="relative")*100,2)
+```
+```{r}
+# Most common items
+library(RColorBrewer)
+itemFrequencyPlot(association, topN= 10, col=brewer.pal(8,'Set1'),main="Relative Item Frequency Plot")
+itemFrequencyPlot(association, support= 0.1, col=brewer.pal(8,'Set1'),main="Relative Importance is at least 10%")
+```
+```{r}
+# Build a Model based on association rules
+# min_supp -> 0.001
+# confidence -> 0.8
+rules <- apriori(association, parameter = list(supp=0.001, conf=0.75))
+rules
+summary(rules)
+inspect(rules[1:5])
+```
+```{r}
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:10])
+```
+
+The  5 most popular Items are:-
+
+1. tea
+2. wheat
+3. mineal
+4. fat
+6. yoghurt
+
+The 5 most popular have support at least 10% and 2 more items which are:-
+
+1. green tea 
+2. milk
+
+We have 4 rules with 100% confidence in the association. We can use this association to increase sales in Females customers in the Branch A and B buy identifying which products the Female Customers buy most
+This can also be done for Male Customers in Branch C
+
+
+The Model can also be used to improve the Marketing and Sales of the Product Lines that are not popular with any of the customers in any Branch.
+
+
