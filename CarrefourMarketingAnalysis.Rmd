@@ -1,0 +1,370 @@
+---
+title: "CarrefourMarketingAnalysis"
+author: "Joy Machuka"
+date: "9/10/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Statement
+Carrefour needs to increase their sales. They therefore get a data analyst to help them come up with marketing strategies to help them achieve this.
+
+# Defining the Question
+You are a Data analyst at Carrefour Kenya and are currently undertaking a project that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales (total price including tax).
+
+# Metrics of Success
+Our analysis will be considered successful when we are able to perform an efficient dimensionality reduction and feature selection and come up with good marketing strategies thereafter.
+
+# Context
+Carrefour is one of the supermarkets in Kenya. They are ranked amongst the top shopping centres in Kenya hence they are always seeking to offer good customer service and in turn employ effective marketing strategies to increase their sales.
+
+# Experimental Design
+Load the Data
+Checking the Data
+Data cleaning
+Exploratory Data Analysis
+Implement the Solution
+Challenge the Solution
+
+# Loading the data
+```{r}
+carrefour <- read.csv("http://bit.ly/CarreFourDataset")
+head(carrefour)
+```
+```{r}
+class(carrefour)
+```
+```{r}
+dim(carrefour)
+```
+Our dataframe has 1000 rows and 16 columns.
+```{r}
+names(carrefour)
+```
+```{r}
+str(carrefour)
+```
+We have 8 numerical columns and 8 char columns. We will convert the char categorical columns to factors for analysis.
+
+# Data Cleaning
+```{r}
+#checking for nulls
+anyNA(carrefour)
+```
+We have no missing values.
+```{r}
+#checking for duplicates
+duplicated_rows <- carrefour[duplicated(carrefour),]
+duplicated_rows
+```
+We have no duplicate values
+```{r}
+#change column names to lower case
+lower <- function(x) {
+    colnames(x) <- tolower(colnames(x))
+    x
+}
+carrefour <- lower(carrefour)
+names(carrefour)
+```
+```{r}
+#drop the ID column
+carrefour1 <- carrefour[,-1]
+names(carrefour1)
+```
+```{r}
+dim(carrefour1)
+```
+New dataframe has now 15 columns 1000 rows
+```{r}
+str(carrefour1)
+```
+
+```{r}
+num_cols <- carrefour1[, c(5,6,7,11,13,14,15)]
+names(num_cols)
+```
+
+```{r}
+outliers = function(x){
+  for(i in colnames(x)){
+    boxplot(carrefour1[[i]], xlab=i, main=paste0("Boxplot for ",i))
+  }
+}
+outliers(num_cols)
+```
+```{r}
+#replacing outliers with 5th and 95th percentile
+outreplace <- function(x){
+   qnt <- quantile(x, probs=c(.25, .75), na.rm = T)
+   caps <- quantile(x, probs=c(.05, .95), na.rm = T)
+   H <- 1.5 * IQR(x, na.rm = T)
+   x[x < (qnt[1] - H)] <- caps[1]
+   x[x > (qnt[2] + H)] <- caps[2]
+   return(x)
+}
+carrefour1$tax <- outreplace(carrefour1$tax)
+carrefour1$cogs <-outreplace(carrefour1$cogs)
+carrefour1$gross.income <- outreplace(carrefour1$gross.income)
+carrefour1$total <- outreplace(carrefour1$total )
+```
+
+```{r}
+outliers = function(x){
+  for(i in colnames(x)){
+    boxplot(carrefour1[[i]], xlab=i, main=paste0("Boxplot for ",i))
+  }
+}
+outliers(num_cols)
+```
+We have removed all outliers from the numerical columns
+
+#Exploratory Data Analysis
+##Univariate Analysis
+```{r}
+library(dplyr)
+carrefour1 <- mutate_at(carrefour1, vars(branch, customer.type,gender,product.line,payment), as.factor)
+str(carrefour1)
+```
+
+```{r}
+#Summary statistics
+summary(carrefour1)
+```
+branch A has 340, branch 332 and branch C has 328 transactions.
+Females are 501 and 499 males
+344 cash payment 311 credit cat payments and 345 using Ewallet
+There were 170 electronic accessories, 178 fashion accessories,174 food and beverages,152 health and beauty, 160 home and lifestyle and 166 sports and travel.
+```{r}
+#mode function
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+#apply it on the duration columns
+getmode(carrefour1$quantity)
+```
+Most number of purchased items per invoice were 10
+```{r}
+#descriptive statistics of the dataframe
+psych::describe(carrefour1)
+```
+```{r}
+#plotting histograms of the numerical columns
+histogram = function(x){
+  for(i in colnames(x)){
+    hist(carrefour1[[i]], breaks = 10,main =i,xlab = i,col = "lightblue")
+  }
+}
+histogram(num_cols)
+```
+```{r}
+library(ggplot2)
+# Customer Type
+customerdist <- ggplot(carrefour1 ,aes(x=customer.type , fill=customer.type)) + geom_bar() + labs(title = "Distribution of the Customer Types", x="Customer Type")
+customerdist +scale_fill_discrete(name = "Customer Type")
+
+# How many Branches we have
+branchdist <- ggplot(carrefour1, aes(x=branch, fill=branch)) + geom_bar()+labs(title = "Distribution of Branches", x="Branches")+scale_fill_discrete(name = "Branch") 
+branchdist
+
+# Gender Distribution
+genderdist <- ggplot(carrefour1, aes(x=gender, fill=gender)) + geom_bar()+labs(title = "Distribution of Gender", x="Gender")+scale_fill_discrete(name = "Gender") 
+genderdist
+
+# Types Product Line
+productlinedist <- ggplot(carrefour1,aes(x=product.line, fill=product.line))+ geom_bar()+ labs(title = "Distribution of Product Line", x="Product Line")+ scale_fill_discrete(name = "Product Line")
+productlinedist + theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+# Types Payments
+paymentdist <- ggplot(carrefour1, aes(x=payment, fill=payment)) + geom_bar()+labs(title = "Distribution of Payments", x="Payment")+scale_fill_discrete(name = "Payment") 
+paymentdist
+```
+## Bivariate Analysis
+```{r}
+#Customer Type groupedby Branch
+c_typecomparison <- ggplot(carrefour1, aes(x=branch, fill=customer.type)) + geom_bar(position = "dodge")+labs(title = "Distribution of Customer Type per Branch", x="Payment")+scale_fill_discrete(name = " Customer Type") 
+c_typecomparison
+
+#Gender per Branch
+gendercomp <- ggplot(carrefour1, aes(x=branch, fill=gender)) + geom_bar(position = "dodge")+labs(title = "Distribution of Gender per Branch", x="Branch")+scale_fill_discrete(name = "Gender") 
+gendercomp
+
+#Payment mode per Branch
+paymentcomp <- ggplot(carrefour1, aes(x=branch, fill=payment)) + geom_bar(position = "dodge")+labs(title = "Distribution of Payment Mode per Branch", x="Branch")+scale_fill_discrete(name = "Payment") 
+paymentcomp
+
+# Customer Type vs Mode of Payment
+c_typecomp2 <- ggplot(carrefour1, aes(x=customer.type, fill=payment)) + geom_bar(position = "dodge")+labs(title = "Customer Type and Mode of Payment", x="Customer Type")+scale_fill_discrete(name = "Mode of Payment") 
+c_typecomp2
+
+# Customer Type and Product Line
+prodlinecomp2 <- ggplot(carrefour1, aes(x=product.line, fill=customer.type)) + geom_bar(position = "dodge")+labs(title = "Distribution of Product Line for Each Customer Type", x="Product Line")+scale_fill_discrete(name = "Customer Type") 
+prodlinecomp2 +theme(axis.text.x = element_text(angle = 30, hjust=0.8))
+
+# Product Line vs Gender
+prodlinecomp3 <- ggplot(carrefour1, aes(x=product.line, fill=gender)) + geom_bar(position = "dodge")+labs(title = "Distribution of Product Line in Each Gender", x="Product Line")+scale_fill_discrete(name = "Gender") 
+prodlinecomp3 +theme(axis.text.x = element_text(angle = 30, hjust=0.8))
+
+#Product line vs quantity per branch
+prodlinecomparison <- ggplot(carrefour1,aes(x=product.line,y=quantity,fill=product.line))+geom_bar(stat = "identity")+ facet_wrap(~branch, scales = "free") + labs(title = "Total Quantity of each Product Line", subtitle = "[per Branch]",x="Product Line", y="Total Quantity") + scale_fill_discrete(name = "Product Line") + theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank())
+prodlinecomparison
+```
+```{r}
+# Product Line with Highest Gross Income
+plineby_gross <- carrefour1 %>%
+  group_by(product.line) %>%
+  summarise(gross = sum(gross.income))
+gross_inc <- ggplot(plineby_gross, aes(x=product.line, y= gross, fill=product.line))+geom_bar(stat = "identity")+ labs(title = "Product Line vs Gross Income", x="Product Line",y="Total Gross Income")
+gross_inc + scale_fill_brewer(name="Product Line",palette="Set1")+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+```{r}
+# Product Line total sales
+plineby_sale <- carrefour1 %>%
+  group_by(product.line) %>%
+  summarise(total = sum(total))
+total_sale <- ggplot(plineby_sale, aes(x=product.line, y= total, fill=product.line))+geom_bar(stat = "identity")+ labs(title = "Total Sales from Each Product Line", x="Product Line",y="Total Sales")
+total_sale + scale_fill_brewer(name="Product Line",palette="Set1")+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+```{r}
+#Banch ratings
+branchby_rate <- carrefour1 %>%
+  group_by(branch) %>%
+  summarise(rate = mean(rating))
+rate <- ggplot(branchby_rate, aes(x=branch, y= rate, fill=branch))+geom_bar(stat = "identity")+ labs(title = "Average Rating Per Branch", x="Branch",y="Average Rating")
+rate + scale_fill_brewer(palette="Set1")+theme(legend.position = "none") 
+```
+```{r}
+#Branch totalsales
+branchby_sale <- carrefour1 %>%
+  group_by(branch) %>%
+  summarise(total = sum(total))
+total_sale <- ggplot(branchby_sale, aes(x=branch, y= total, fill=branch))+geom_bar(stat = "identity")+ labs(title = "Total Sales from Each Branch", x="Branch",y="Total Sales")
+total_sale + scale_fill_brewer(name="Branch",palette="Set1")+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+```{r}
+#customer type  gross income comparison
+custtypeby_gross <- carrefour1 %>%
+  group_by(customer.type) %>%
+  summarise(gross = sum(gross.income))
+cust_type <- ggplot(custtypeby_gross, aes(x=customer.type, y= gross, fill=customer.type))+geom_bar(stat = "identity")+ labs(title = " Total Gross Income per Customer Type", x="Customer Type",y="Total Gross Income")
+cust_type + scale_fill_brewer( name= "Customer Type",palette="Set1")+theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+```{r}
+# Covariance
+covariance = cov(num_cols)
+View(round(covariance,2))
+```
+
+```{r}
+# Correlation matrix
+corr_matrix = cor(num_cols)
+corr <- as.data.frame(round(corr_matrix,2))
+corr
+```
+# PCA
+```{r}
+str(carrefour1)
+```
+```{r}
+num_features <- carrefour1[, c(5,6,7, 11,13:15)]
+names(num_features)
+```
+```{r}
+carrefour.pca <- prcomp(num_features, center = TRUE, scale. = TRUE)
+carrefour.pca
+summary(carrefour.pca)
+```
+```{r}
+str(carrefour.pca)
+```
+# Feature Selection
+
+```{r}
+library(caret)
+library(corrplot)
+```
+
+```{r}
+highlyCorrelated <- findCorrelation(corr_matrix, cutoff=0.75)
+```
+
+```{r}
+highlyCorrelated
+
+names(carrefour1[,highlyCorrelated])
+```
+```{r}
+carrefour2<-carrefour1[-highlyCorrelated]
+str(carrefour2)
+```
+```{r}
+num_features2 <- carrefour2[, c(3,4,8, 10:12)]
+names(num_features2)
+```
+
+```{r}
+# Performing our graphical comparison
+# ---
+# 
+par(mfrow = c(1, 2))
+corrplot(corr_matrix, order = "hclust")
+corrplot(cor(num_features2), order = "hclust")
+```
+Variables acceptable were: unit.price, quantity, cogs, gross.income, rating and total"
+
+Wrapper Method
+```{r}
+library(clustvarsel)
+library(mclust)
+```
+
+```{r}
+head(num_features2)
+```
+```{r}
+# out = clustvarsel(num_features2, G=1:6)
+# out
+# # Features selected
+# data <- num_features2[,out$subset]
+# head(data)
+```
+Our wrapper method accepted gross income but was taking long to complete the search hence terminated it.
+
+# Feature ranking
+```{r}
+library(FSelector)
+
+feat <- num_features2
+Scores <- linear.correlation(total~., feat)
+Scores
+# Selected Features
+Subset <- cutoff.k(Scores, 5)
+as.data.frame(Subset)
+```
+With feature ranking we had cogs, gross.income, quantity, unit.price and rating
+
+
+
+
+
+
+
+
